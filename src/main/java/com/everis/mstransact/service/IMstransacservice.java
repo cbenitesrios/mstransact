@@ -7,8 +7,10 @@ import com.everis.mstransact.model.dto.CreditDto;
 import com.everis.mstransact.model.request.AccdepositRequest;
 import com.everis.mstransact.model.request.AccwithdrawRequest;
 import com.everis.mstransact.model.request.Creditconsumerequest;
-import com.everis.mstransact.model.request.Creditpaymentrequest; 
+import com.everis.mstransact.model.request.Creditpaymentrequest;
+import com.everis.mstransact.model.request.Updatetransactionreq;
 
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public interface IMstransacservice {
@@ -17,10 +19,10 @@ public interface IMstransacservice {
   Mono<Transaction> creditpayment(Creditpaymentrequest cpaymentrequest, Mono<CreditDto> account, WebClient credwebclient);
   Mono<Transaction> creditconsume(Creditconsumerequest cpaymentrequest, Mono<CreditDto> account, WebClient credwebclient);
   
-  /*Mono<Void> deletetransaction(String id); 
+  Mono<Void> deletetransaction(String id); 
   Flux<Transaction> findtransaction();
   Flux<Transaction> findclienttransaction(String titular);
   Mono<Transaction> findtransactionbyid(String id);
-  Mono<Transaction> updatetransaction(Updatetransactionreq updatetransactionreq);*/
+  Mono<Transaction> updatetransaction(Updatetransactionreq updatetransactionreq);
  
 }

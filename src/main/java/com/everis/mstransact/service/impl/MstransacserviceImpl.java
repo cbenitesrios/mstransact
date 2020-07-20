@@ -12,6 +12,7 @@ import com.everis.mstransact.model.request.AccdepositRequest;
 import com.everis.mstransact.model.request.AccwithdrawRequest;
 import com.everis.mstransact.model.request.Creditconsumerequest;
 import com.everis.mstransact.model.request.Creditpaymentrequest;
+import com.everis.mstransact.model.request.Updatetransactionreq;
 import com.everis.mstransact.repository.ITransactionrepo;
 import com.everis.mstransact.service.IMstransacservice;
 
@@ -106,7 +107,7 @@ public class MstransacserviceImpl implements IMstransacservice{
 								                    .postamount(then.getBaseline()-then.getConsume())
 								                    .build()));
 	}
-	/*
+
 	@Override
 	public Mono<Void> deletetransaction(String id) { 
 		return transacrepo.findById(id)
@@ -144,23 +145,7 @@ public class MstransacserviceImpl implements IMstransacservice{
 	                   	   .amount(updatetransacreq.getAmount())
 	                   	   .postamount(updatetransacreq.getPostamount()) 
 	                       .build()));
-		}
-	
-	
-	*/ 
-	
-	/*private Mono<Account> refreshdeposit(Account account, Double amount) {
-		account.setSaldo(account.getSaldo()+amount);
-		return accountrepo.save(account);
-	}	
-	private Mono<Credit> refreshpayment(Credit credit, Double amount) {
-		credit.setConsume(credit.getConsume()-amount);
-		return creditrepo.save(credit);
 	}
-	private Mono<Credit> refreshconsume(Credit credit, Double amount) {
-		credit.setConsume(credit.getConsume()+ amount);
-		return creditrepo.save(credit);
-	}
-*/
+	 
 
 }

@@ -1,9 +1,15 @@
 package com.everis.mstransact.expose;
 
-import org.springframework.beans.factory.annotation.Autowired; 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping; 
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -14,14 +20,15 @@ import com.everis.mstransact.model.request.AccdepositRequest;
 import com.everis.mstransact.model.request.AccwithdrawRequest;
 import com.everis.mstransact.model.request.Creditconsumerequest;
 import com.everis.mstransact.model.request.Creditpaymentrequest;
+import com.everis.mstransact.model.request.Updatetransactionreq;
 import com.everis.mstransact.service.IMstransacservice; 
 
-import lombok.extern.java.Log; 
+import lombok.extern.java.Log;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RestController
-@RequestMapping("/apitransaction")
-@Log
+@RequestMapping("/apitransaction") 
 public class MstransactionController {
 	
 	@Autowired
@@ -57,7 +64,6 @@ public class MstransactionController {
 		return transacservice.creditconsume(cconsumerequest, credit, WebClient.create(URL_CREDIT + "/updatecredit"));
 	}
 	
-	/*
 	@DeleteMapping("/delete/{id}")
     @ResponseStatus(code = HttpStatus.NO_CONTENT)
 	public Mono<Void> deletetransaction(@PathVariable String id){
@@ -84,5 +90,5 @@ public class MstransactionController {
       return transacservice.updatetransaction(updatetransactionreq);
     }
 
-*/
+ 
 }

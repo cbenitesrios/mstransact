@@ -1,7 +1,5 @@
 package com.everis.mstransact.model;
- 
-
-import java.sql.Date;
+import java.time.LocalDateTime;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -26,7 +24,9 @@ public class Transaction{
 	private String prodtype; 
 	private String transtype;
 	private String titular;
-	private Date transactdate;
+	@Builder.Default
+	private LocalDateTime transactdate= LocalDateTime.now() ;
 	private Double amount; 
+	private Double commission;
 	private Double postamount; 
 }

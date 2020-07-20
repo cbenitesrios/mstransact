@@ -1,4 +1,7 @@
 package com.everis.mstransact.service; 
+ 
+import java.time.LocalDate; 
+
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.everis.mstransact.model.Transaction;
@@ -21,7 +24,7 @@ public interface IMstransacservice {
   
   Mono<Void> deletetransaction(String id); 
   Flux<Transaction> findtransaction();
-  Flux<Transaction> findclienttransaction(String titular);
+  Flux<Transaction> findclienttransaction(String titular,  LocalDate  date1,  LocalDate date2);
   Mono<Transaction> findtransactionbyid(String id);
   Mono<Transaction> updatetransaction(Updatetransactionreq updatetransactionreq);
  

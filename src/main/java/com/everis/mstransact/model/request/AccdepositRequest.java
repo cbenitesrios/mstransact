@@ -14,4 +14,5 @@ public class AccdepositRequest{
 	private String prodtype; 
 	private String titular;
 	private Double amount;
+	private Double commission=0d;
 }

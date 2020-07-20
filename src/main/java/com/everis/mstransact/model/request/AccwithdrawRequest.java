@@ -17,5 +17,6 @@ public class AccwithdrawRequest {
 	private String prodtype; 
 	private String titular;
 	private Double amount;
+	private Double commission;
 	
 }

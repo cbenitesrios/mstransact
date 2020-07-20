@@ -18,5 +18,6 @@ public class Updatetransactionreq {
 	private String titular;
 	private Double amount; 
 	private Double postamount; 
+	private Double commission;
 
 }

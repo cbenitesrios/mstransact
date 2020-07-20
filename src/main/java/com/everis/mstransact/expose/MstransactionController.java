@@ -1,6 +1,10 @@
 package com.everis.mstransact.expose;
 
+import java.sql.Date;
+import java.time.LocalDate;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -9,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -22,8 +27,7 @@ import com.everis.mstransact.model.request.Creditconsumerequest;
 import com.everis.mstransact.model.request.Creditpaymentrequest;
 import com.everis.mstransact.model.request.Updatetransactionreq;
 import com.everis.mstransact.service.IMstransacservice; 
-
-import lombok.extern.java.Log;
+ 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -80,8 +84,10 @@ public class MstransactionController {
     }
 	
 	@GetMapping("/findbytitular/{titular}")
-	public Flux<Transaction> findtitulartransaction(@PathVariable String titular){
-	      return transacservice.findclienttransaction(titular);
+	public Flux<Transaction> findtitulartransaction(@PathVariable String titular,
+		  @RequestParam(name = "date1", defaultValue ="01/01/1980" )@DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate  date1,
+  	      @RequestParam(name = "date2", defaultValue = "01/01/4000") @DateTimeFormat(pattern = "yyyy-MM-dd")LocalDate date2){
+	      return transacservice.findclienttransaction(titular, date1, date2);
     }
 	
     @PutMapping("/updateaccount")

@@ -4,7 +4,9 @@ import java.time.LocalDate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.function.client.WebClient; 
+import org.springframework.web.reactive.function.client.WebClient;
+
+import com.everis.mstransact.config.Configtransaction;
 import com.everis.mstransact.model.Transaction;
 import com.everis.mstransact.model.dto.AccountDto;
 import com.everis.mstransact.model.dto.CreditDto;
@@ -23,10 +25,6 @@ public class MstransacserviceImpl implements IMstransacservice{
 	
 	@Autowired
 	private ITransactionrepo transacrepo;
-	
-	private static final Double COMMISSION_WITHDRAW_VALUE= 10d;
-	private static final Double COMMISSION_DEPOSIT_VALUE= 10d;
-	private static final Long COMMISSION_FREE_TIMES= 5l;
 
 	@Override
 	public Mono<Transaction> moneywithdraw(AccwithdrawRequest mwithdrawrequest, Mono<AccountDto> account, WebClient webclient) { 
@@ -34,7 +32,7 @@ public class MstransacserviceImpl implements IMstransacservice{
 				      .switchIfEmpty(Mono.error(new Exception("Titular not found")))
 				      .flatMap(acc-> 
 				    	  transacrepo.countByTitular(mwithdrawrequest.getTitular()).switchIfEmpty(Mono.error(new Exception("problema"))).log().map(count ->
-				    	  {   mwithdrawrequest.setCommission(count>=COMMISSION_FREE_TIMES?COMMISSION_WITHDRAW_VALUE:0);  
+				    	  {   mwithdrawrequest.setCommission(count>=Configtransaction.COMMISSION_FREE_TIMES?Configtransaction.COMMISSION_WITHDRAW_VALUE:0);  
 				    	      return acc;
 				    	  }) 
 				      )
@@ -46,8 +44,8 @@ public class MstransacserviceImpl implements IMstransacservice{
 				      })
 				      .switchIfEmpty(Mono.error(new Exception("Error refresh account")))
 				      .flatMap(then->            transacrepo.save(Transaction.builder()
-							                    .prodid(mwithdrawrequest.getId())
-							                    .prodtype(mwithdrawrequest.getProdtype())
+							                    .prodid(then.getId())
+							                    .prodtype(then.getAcctype())
 							                    .transtype("WITHDRAW")
 							                    .titular(mwithdrawrequest.getTitular())
 							                    .amount(mwithdrawrequest.getAmount())
@@ -58,12 +56,11 @@ public class MstransacserviceImpl implements IMstransacservice{
 	
 	@Override
 	public Mono<Transaction> moneydeposit(AccdepositRequest mdepositrequest, Mono<AccountDto> account, WebClient webclient) {
-		 
 		return account.filter(acc-> acc.getTitular().contains(mdepositrequest.getTitular()))
 		              .switchIfEmpty(Mono.error(new Exception("Titular not found")))
 				      .flatMap(acc-> transacrepo.countByTitular(mdepositrequest.getTitular())
 				    		  .flatMap(count ->
-				              {      mdepositrequest.setCommission(count>=COMMISSION_FREE_TIMES?COMMISSION_DEPOSIT_VALUE:0); 
+				              {      mdepositrequest.setCommission(count>=Configtransaction.COMMISSION_FREE_TIMES?Configtransaction.COMMISSION_DEPOSIT_VALUE:0); 
 				    		         acc.setSaldo(acc.getSaldo() + mdepositrequest.getAmount()-mdepositrequest.getCommission());
 					    	         return webclient.put().body(BodyInserters.fromValue(acc)).retrieve().bodyToMono(AccountDto.class);
 			                  })
@@ -71,7 +68,7 @@ public class MstransacserviceImpl implements IMstransacservice{
 				      .switchIfEmpty(Mono.error(new Exception("Error refresh account")))
 				      .flatMap(then->               transacrepo.save(Transaction.builder()
 								                    .prodid(then.getId())
-								                    .prodtype(then.getAcctype())
+								                    .prodtype(mdepositrequest.getProdtype())
 								                    .transtype("DEPOSIT")
 								                    .titular(mdepositrequest.getTitular())
 								                    .amount(mdepositrequest.getAmount())
@@ -157,7 +154,7 @@ public class MstransacserviceImpl implements IMstransacservice{
 	                   	   .transtype(updatetransacreq.getTranstype())
 	                   	   .titular(updatetransacreq.getTitular())
 	                   	   .amount(updatetransacreq.getAmount())
-	                   	   .commission(updatetransacreq.getCommision())
+	                   	   .commission(updatetransacreq.getCommission())
 	                   	   .postamount(updatetransacreq.getPostamount()) 
 	                       .build()));
 	}

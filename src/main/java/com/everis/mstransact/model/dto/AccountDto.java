@@ -1,13 +1,14 @@
 package com.everis.mstransact.model.dto;
 
 import java.util.List;
- 
- 
-import lombok.Data; 
-import lombok.NoArgsConstructor;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;  
  
 
 @Data
+@AllArgsConstructor
 @NoArgsConstructor
 public class AccountDto {
 
@@ -16,7 +17,6 @@ public class AccountDto {
 	private List<String> titular;
 	private List<String> firmantecode;
 	private Double saldo;
-
-
-
+	private String acctypedesc; 
+	
 }

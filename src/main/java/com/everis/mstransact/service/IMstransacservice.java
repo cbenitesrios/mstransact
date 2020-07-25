@@ -11,6 +11,7 @@ import com.everis.mstransact.model.request.AccdepositRequest;
 import com.everis.mstransact.model.request.AccwithdrawRequest;
 import com.everis.mstransact.model.request.Creditconsumerequest;
 import com.everis.mstransact.model.request.Creditpaymentrequest;
+import com.everis.mstransact.model.request.Transferpaymentrequest;
 import com.everis.mstransact.model.request.Updatetransactionreq;
 
 import reactor.core.publisher.Flux;
@@ -19,8 +20,9 @@ import reactor.core.publisher.Mono;
 public interface IMstransacservice {
   Mono<Transaction> moneywithdraw(AccwithdrawRequest mwithdrawrequest, Mono<AccountDto> account,WebClient accwebclient);
   Mono<Transaction> moneydeposit(AccdepositRequest mdepositrequest, Mono<AccountDto> account, WebClient accwebclient);
-  Mono<Transaction> creditpayment(Creditpaymentrequest cpaymentrequest, Mono<CreditDto> account, WebClient credwebclient);
-  Mono<Transaction> creditconsume(Creditconsumerequest cpaymentrequest, Mono<CreditDto> account, WebClient credwebclient);
+  Mono<Transaction> creditpayment(Creditpaymentrequest cpaymentrequest, Mono<CreditDto> credit, WebClient credwebclient);
+  Mono<Transaction> creditconsume(Creditconsumerequest cpaymentrequest, Mono<CreditDto> credit, WebClient credwebclient);
+  Mono<Transaction> transferpayment(Transferpaymentrequest tpaymentrequest, Mono<AccountDto> account, Mono<CreditDto> credit, WebClient accwebclient,  WebClient credwebclient);
   
   Mono<Void> deletetransaction(String id); 
   Flux<Transaction> findtransaction();

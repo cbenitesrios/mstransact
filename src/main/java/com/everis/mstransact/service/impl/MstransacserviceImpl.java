@@ -14,6 +14,7 @@ import com.everis.mstransact.model.request.AccdepositRequest;
 import com.everis.mstransact.model.request.AccwithdrawRequest;
 import com.everis.mstransact.model.request.Creditconsumerequest;
 import com.everis.mstransact.model.request.Creditpaymentrequest;
+import com.everis.mstransact.model.request.Transferpaymentrequest;
 import com.everis.mstransact.model.request.Updatetransactionreq;
 import com.everis.mstransact.repository.ITransactionrepo;
 import com.everis.mstransact.service.IMstransacservice; 
@@ -157,6 +158,61 @@ public class MstransacserviceImpl implements IMstransacservice{
 	                   	   .commission(updatetransacreq.getCommission())
 	                   	   .postamount(updatetransacreq.getPostamount()) 
 	                       .build()));
+	}
+
+	@Override
+	public Mono<Transaction> transferpayment(Transferpaymentrequest tpaymentrequest, Mono<AccountDto> account,
+			Mono<CreditDto> credit, WebClient accwebclient, WebClient credwebclient) {
+		
+		return  account.filter(acc->acc.getTitular().contains(tpaymentrequest.getAccounttitular()))
+				.switchIfEmpty(Mono.error(new Exception("Not same account holder - transferpayment")))
+				.flatMap(acc-> 
+		    	  transacrepo.countByTitular(tpaymentrequest.getAccounttitular()).switchIfEmpty(Mono.error(new Exception("problema"))).log().map(count ->
+		    	  {   tpaymentrequest.setCommission(count>=Configtransaction.COMMISSION_FREE_TIMES?Configtransaction.COMMISSION_WITHDRAW_VALUE:0);  
+		    	      return acc;
+		    	  }) 
+		         )
+				.filter(acc-> acc.getSaldo()-tpaymentrequest.getAmount()-tpaymentrequest.getCommission()>=0)
+				.switchIfEmpty(Mono.error(new Exception("Cant process the transaction - low account balance")))
+				.then(credit)
+				.filter(cred-> cred.getTitular().contains(tpaymentrequest.getCredittitular()))
+				.switchIfEmpty(Mono.error(new Exception("Not same credit holder - transferpayment")))
+				.filter(cred -> (cred.getConsume()-tpaymentrequest.getAmount()-tpaymentrequest.getCommission())>=0)
+				.switchIfEmpty(Mono.error(new Exception("Cant process the transaction - amount")))
+				.flatMap(cre->{
+					 cre.setConsume(cre.getConsume()-tpaymentrequest.getAmount()-tpaymentrequest.getCommission());
+					 return credwebclient.put().body(BodyInserters.fromValue(cre)).retrieve().bodyToMono(CreditDto.class) ;
+				})
+				.switchIfEmpty(Mono.error(new Exception("Cant process the transcation - credit")))
+				.flatMap(cre->transacrepo.save(Transaction.builder()
+	                         .prodid(cre.getId())
+	                   	     .prodtype(tpaymentrequest.getProdtype()) 
+	                   	     .transtype("TRANSPAYMENT")
+	                   	     .titular(tpaymentrequest.getCredittitular())
+	                   	     .amount(tpaymentrequest.getAmount())
+	                   	     .commission(tpaymentrequest.getCommission())
+	                   	     .postamount(cre.getConsume()-tpaymentrequest.getAmount()-tpaymentrequest.getCommission()) 
+	                         .build()))
+				.switchIfEmpty(Mono.error(new Exception("Cant process the transaction - creditransaction")))
+				.then(account)
+				.flatMap(acc-> {
+			    	  acc.setSaldo(acc.getSaldo()- tpaymentrequest.getAmount()-tpaymentrequest.getCommission());
+			    	  return accwebclient.put().body(BodyInserters.fromValue(acc)).retrieve().bodyToMono(AccountDto.class);
+			      })
+				.switchIfEmpty(Mono.error(new Exception("Cant process the transaction - account")))
+				.flatMap(then->            transacrepo.save(Transaction.builder()
+	                    .prodid(then.getId())
+	                    .prodtype(then.getAcctype())
+	                    .transtype("TRANSWITHDRAW")
+	                    .titular(tpaymentrequest.getAccounttitular())
+	                    .amount(tpaymentrequest.getAmount())
+	                    .commission(tpaymentrequest.getCommission())
+	                    .postamount(then.getSaldo())
+	                    .build())); 		
+				
+				
+				 
+			 
 	}
 	 
 

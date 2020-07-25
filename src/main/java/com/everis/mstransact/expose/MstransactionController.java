@@ -1,12 +1,9 @@
 package com.everis.mstransact.expose;
-
-import java.sql.Date;
-import java.time.LocalDate;
-
+ 
+import java.time.LocalDate; 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.HttpStatus;
-import org.springframework.validation.annotation.Validated;
+import org.springframework.http.HttpStatus; 
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,8 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.reactive.function.client.WebClient;
-
+import org.springframework.web.reactive.function.client.WebClient; 
 import com.everis.mstransact.model.Transaction;
 import com.everis.mstransact.model.dto.AccountDto;
 import com.everis.mstransact.model.dto.CreditDto;
@@ -26,9 +22,9 @@ import com.everis.mstransact.model.request.AccdepositRequest;
 import com.everis.mstransact.model.request.AccwithdrawRequest;
 import com.everis.mstransact.model.request.Creditconsumerequest;
 import com.everis.mstransact.model.request.Creditpaymentrequest;
+import com.everis.mstransact.model.request.Transferpaymentrequest;
 import com.everis.mstransact.model.request.Updatetransactionreq;
-import com.everis.mstransact.service.IMstransacservice; 
- 
+import com.everis.mstransact.service.IMstransacservice;  
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -56,13 +52,23 @@ public class MstransactionController {
 		return transacservice.moneydeposit(mdepositrequest, accountReq, WebClient.create(URL_ACCOUNT + "/updateaccount"));
 	}
 
-
 	@PostMapping("/payment")
 	public Mono<Transaction> creditpayment(@RequestBody Creditpaymentrequest cpaymentrequest){
 		Mono<CreditDto> credit = WebClient.create( URL_CREDIT + "/findcred/"+cpaymentrequest.getId())
                 .get().retrieve().bodyToMono(CreditDto.class);
 		return transacservice.creditpayment(cpaymentrequest, credit, WebClient.create(URL_CREDIT + "/updatecredit"));
 	}
+	
+	@PostMapping("/transferpayment")
+	public Mono<Transaction> transferpayment(@RequestBody Transferpaymentrequest tpaymentrequest){
+		Mono<AccountDto> account = WebClient.create( URL_ACCOUNT + "/findacc/"+tpaymentrequest.getAccountid())
+                .get().retrieve().bodyToMono(AccountDto.class); 
+		Mono<CreditDto> credit = WebClient.create( URL_CREDIT + "/findcred/"+tpaymentrequest.getCreditid())
+                .get().retrieve().bodyToMono(CreditDto.class);
+		return transacservice.transferpayment(tpaymentrequest, account, credit, WebClient.create(URL_ACCOUNT + "/updateaccount"), WebClient.create(URL_CREDIT + "/updatecredit"));
+	}
+	 
+	
 	@PostMapping("/consume")
 	public Mono<Transaction> creditconsume(@RequestBody Creditconsumerequest cconsumerequest){
 		Mono<CreditDto> credit = WebClient.create( URL_CREDIT + "/findcred/"+cconsumerequest.getId())

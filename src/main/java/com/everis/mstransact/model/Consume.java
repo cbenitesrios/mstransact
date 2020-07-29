@@ -1,11 +1,12 @@
 package com.everis.mstransact.model;
 
-import java.time.LocalDate; 
-import org.springframework.data.mongodb.core.mapping.Document; 
+import java.time.LocalDate;
+
+import org.springframework.data.mongodb.core.mapping.Document;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data; 
-import lombok.NoArgsConstructor; 
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 @Data 

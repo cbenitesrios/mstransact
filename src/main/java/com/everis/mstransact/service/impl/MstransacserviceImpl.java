@@ -36,6 +36,11 @@ public class MstransacserviceImpl implements IMstransacservice{
 	@Autowired
 	private IConsumeRepo consumerepo;
 
+	/*Se verifica la cuenta retornada si contiene el titular que hizo la peticion*/
+	/*Luego se hace un conteo de sus transacciones realizadas y si son mayores a un COMMISSION_FREE_TIMES, entonces le pone una comision */
+	/*Despues se filtra si el monto a retirar con comision es mayor al saldo de la cuenta*/
+	/*Luego se actualiza el saldo con los nuevos valores en el microservicio de account*/
+	/*Se registra la transaccion como withdraw*/
 	@Override
 	public Mono<Transaction> moneywithdraw(AccwithdrawRequest mwithdrawrequest, Mono<AccountDto> account, WebClient webclient) { 
 		return account.filter(acc-> acc.getTitular().contains(mwithdrawrequest.getTitular()))
@@ -63,6 +68,10 @@ public class MstransacserviceImpl implements IMstransacservice{
 							                    .build())); 
 	}
 	
+	/*Se verifica la cuenta retornada si contiene el titular que hizo la peticion*/
+	/*Luego se hace un conteo de sus transacciones realizadas y si son mayores a un COMMISSION_FREE_TIMES, entonces le pone una comision */ 
+	/*Luego se actualiza el saldo con los nuevos valores en el microservicio de account*/
+	/*Se registra la transaccion como deposit*/
 	@Override
 	public Mono<Transaction> moneydeposit(AccdepositRequest mdepositrequest, Mono<AccountDto> account, WebClient webclient) {
 		return account.filter(acc-> acc.getTitular().contains(mdepositrequest.getTitular()))
@@ -73,8 +82,7 @@ public class MstransacserviceImpl implements IMstransacservice{
 				    		         acc.setBalance(acc.getBalance() + mdepositrequest.getAmount()-mdepositrequest.getCommission());
 					    	         return webclient.put().body(BodyInserters.fromValue(acc)).retrieve().bodyToMono(AccountDto.class);
 			                  })
-				      ) 
-				      .doOnNext(System.out::println)
+				      )  
 				      .switchIfEmpty(Mono.error(new Exception("Error refresh account")))
 				      .flatMap(then->               transacrepo.save(Transaction.builder()
 								                    .prodid(then.getId())
@@ -87,6 +95,11 @@ public class MstransacserviceImpl implements IMstransacservice{
 								                    .build()));
 	}
 	
+	/* Se verifica el credito retornado si contiene el titular que hizo la peticion*/
+	/*Se filtra si el consumo de la peticion es mayor a la linea base del credito menos el consumo ya realizado anteriormente*/ 
+	/*Luego se actualiza el credito con los nuevos valores en el microservicio de credit*/
+	/*Se registra un consumo y se asigna como fecha de pago el dia final del mes siguiente*/
+	/*Se registra la transaccion como consumo*/
 	@Override
 	public Mono<Transaction> creditconsume(Creditconsumerequest cconsumerequest,  Mono<CreditDto> credit, WebClient credwebclient) { 
 		return credit.filter(cred-> cred.getTitular().contains(cconsumerequest.getTitular()))
@@ -118,6 +131,12 @@ public class MstransacserviceImpl implements IMstransacservice{
 				    	);
 	}
 
+	/*Se verifica el credito retornado si contiene el titular que hizo la peticion*/
+	/*Se filtra si el monto de la peticion es mayor al consumo actual*/ 
+	/*Luego se actualiza el credito con los nuevos valores en el microservicio de credit*/
+	/*Se registra la transaccion como consumo*/
+	/*Se actualiza los consumos realizados por el usuario, se toma el mas antiguo y se va pagando de acuerdo a los montos de los consumos sin pagar*/
+	
 	@Override
 	public Mono<Transaction> creditpayment(Creditpaymentrequest cpaymentrequest, Mono<CreditDto> credit, WebClient credwebclient) { 
 		return  credit.filter(cred-> cred.getTitular().contains(cpaymentrequest.getTitular())) 
@@ -197,6 +216,10 @@ public class MstransacserviceImpl implements IMstransacservice{
 	                       .build()));
 	}
 
+	
+	/*En este metodo se hace una transferencia de una cuenta para hacer el pago de un consumo de un credito*/
+	/*Se realiza como un retiro de cuenta y luego como pago de un consumo*/
+	
 	@Override
 	public Mono<Transaction> transferpayment(Transferpaymentrequest tpaymentrequest, Mono<AccountDto> account,
 			Mono<CreditDto> credit, WebClient accwebclient, WebClient credwebclient) { 
@@ -248,6 +271,9 @@ public class MstransacserviceImpl implements IMstransacservice{
 				 
 			 
 	}
+	
+	
+	
 	
 	@Override
 	public Mono<Boolean> checkforexpiredcredit(String titular){

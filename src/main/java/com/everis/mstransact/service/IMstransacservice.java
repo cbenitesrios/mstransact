@@ -29,5 +29,7 @@ public interface IMstransacservice {
   Flux<Transaction> findclienttransaction(String titular,  LocalDate  date1,  LocalDate date2);
   Mono<Transaction> findtransactionbyid(String id);
   Mono<Transaction> updatetransaction(Updatetransactionreq updatetransactionreq);
- 
+  Mono<Boolean> checkforexpiredcredit(String titular);
+  
+  
 }

@@ -23,12 +23,10 @@ import com.everis.mstransact.repository.IConsumeRepo;
 import com.everis.mstransact.repository.ITransactionrepo;
 import com.everis.mstransact.service.IMstransacservice;
 import com.google.common.util.concurrent.AtomicDouble;
-
-import lombok.extern.java.Log;
+ 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
- 
-@Log
+  
 @Service
 public class MstransacserviceImpl implements IMstransacservice{
 	
@@ -103,6 +101,7 @@ public class MstransacserviceImpl implements IMstransacservice{
 				    		   .amount(cconsumerequest.getAmount())
 				    		   .notpayedamount(cconsumerequest.getAmount())
 	                           .productid(then.getId())
+	                           .titular(then.getTitular())
 	                           .month(LocalDate.now())
 	                           .maxmonth(LocalDate.of(LocalDate.now().getYear(),LocalDate.now().plusMonths(1L).getMonth(),LocalDate.now().plusMonths(1L).lengthOfMonth()))
 	                           .payed(false)
@@ -245,15 +244,18 @@ public class MstransacserviceImpl implements IMstransacservice{
 	                    .amount(tpaymentrequest.getAmount())
 	                    .commission(tpaymentrequest.getCommission())
 	                    .postamount(then.getBalance())
-	                    .build())); 		
-				
-				
+	                    .build())); 		 
 				 
 			 
 	}
 	
 	@Override
-	public Mono<Boolean> check
+	public Mono<Boolean> checkforexpiredcredit(String titular){
+		return consumerepo.findByTitularAndPayed(titular, false) 
+				          .collectList()
+				          .map(cons -> cons.stream().filter(a-> a.getMaxmonth().isBefore(LocalDate.now())).count()>0);
+				        		  
+	}
 	 
 
 }

@@ -104,5 +104,9 @@ public class MstransactionController {
       return transacservice.updatetransaction(updatetransactionreq);
     }
 
+    @GetMapping("/checkexpired/{titular}")
+    public Mono<Boolean> checkforexpiredcredit(@PathVariable String titular) {
+        return transacservice.checkforexpiredcredit(titular);
+      }
  
 }

@@ -10,5 +10,6 @@ import reactor.core.publisher.Mono;
 public interface IConsumeRepo extends ReactiveMongoRepository<Consume, String>{
 	
 	Flux<Consume> findByProductidAndPayedOrderByMonthAsc(String productid, Boolean payed);
+	Flux<Consume> findByTitularAndPayed(String titular, Boolean payed);
 
 }

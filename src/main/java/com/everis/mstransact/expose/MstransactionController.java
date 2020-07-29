@@ -55,7 +55,7 @@ public class MstransactionController {
 	@PostMapping("/payment")
 	public Mono<Transaction> creditpayment(@RequestBody Creditpaymentrequest cpaymentrequest){
 		Mono<CreditDto> credit = WebClient.create( URL_CREDIT + "/findcred/"+cpaymentrequest.getId())
-                .get().retrieve().bodyToMono(CreditDto.class);
+                .get().retrieve().bodyToMono(CreditDto.class).doOnNext(System.out::println);
 		return transacservice.creditpayment(cpaymentrequest, credit, WebClient.create(URL_CREDIT + "/updatecredit"));
 	}
 	

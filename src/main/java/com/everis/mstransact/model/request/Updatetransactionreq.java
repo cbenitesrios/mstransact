@@ -1,6 +1,8 @@
 package com.everis.mstransact.model.request;
  
 
+import java.time.LocalDateTime;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -16,7 +18,8 @@ public class Updatetransactionreq {
 	private String prodtype;
 	private String transtype;
 	private String titular;
-	private Double amount; 
+	private Double amount;
+    private LocalDateTime transactdate;
 	private Double postamount; 
 	private Double commission;
 

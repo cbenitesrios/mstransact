@@ -12,6 +12,7 @@ import com.everis.mstransact.config.Configtransaction;
 import com.everis.mstransact.model.Consume;
 import com.everis.mstransact.model.Transaction;
 import com.everis.mstransact.model.dto.AccountDto;
+import com.everis.mstransact.model.dto.AtmtransactDto;
 import com.everis.mstransact.model.dto.CreditDto;
 import com.everis.mstransact.model.request.AccdepositRequest;
 import com.everis.mstransact.model.request.AccwithdrawRequest;
@@ -19,6 +20,8 @@ import com.everis.mstransact.model.request.Creditconsumerequest;
 import com.everis.mstransact.model.request.Creditpaymentrequest;
 import com.everis.mstransact.model.request.Transferpaymentrequest;
 import com.everis.mstransact.model.request.Updatetransactionreq;
+import com.everis.mstransact.model.response.TransactionResponse;
+import com.everis.mstransact.repository.ICommissionRepo;
 import com.everis.mstransact.repository.IConsumeRepo;
 import com.everis.mstransact.repository.ITransactionrepo;
 import com.everis.mstransact.service.IMstransacservice;
@@ -35,6 +38,9 @@ public class MstransacserviceImpl implements IMstransacservice{
 	
 	@Autowired
 	private IConsumeRepo consumerepo;
+	
+	@Autowired
+	private ICommissionRepo commissionrepo;
 
 	/*Se verifica la cuenta retornada si contiene el titular que hizo la peticion*/
 	/*Luego se hace un conteo de sus transacciones realizadas y si son mayores a un COMMISSION_FREE_TIMES, entonces le pone una comision */
@@ -46,7 +52,7 @@ public class MstransacserviceImpl implements IMstransacservice{
 		return account.filter(acc-> acc.getTitular().contains(mwithdrawrequest.getTitular()))
 				      .switchIfEmpty(Mono.error(new Exception("Titular not found")))
 				      .flatMap(acc-> 
-				    	  transacrepo.countByTitular(mwithdrawrequest.getTitular()).switchIfEmpty(Mono.error(new Exception("problema"))).log().map(count ->
+				    	  transacrepo.countByTitular(mwithdrawrequest.getTitular()).switchIfEmpty(Mono.error(new Exception("problema"))).map(count ->
 				    	  {   mwithdrawrequest.setCommission(count>=Configtransaction.COMMISSION_FREE_TIMES?Configtransaction.COMMISSION_WITHDRAW_VALUE:0);  
 				    	      return acc;
 				    	  })) 
@@ -232,15 +238,15 @@ public class MstransacserviceImpl implements IMstransacservice{
 		    	  }) 
 		         )
 				.filter(acc-> acc.getBalance()-tpaymentrequest.getAmount()-tpaymentrequest.getCommission()>=0)
-				.switchIfEmpty(Mono.error(new Exception("Cant process the transaction - low account balance")))
+				        .switchIfEmpty(Mono.error(new Exception("Cant process the transaction - low account balance")))
 				.then(credit)
 				.filter(cred-> cred.getTitular().contains(tpaymentrequest.getCredittitular()))
-				.switchIfEmpty(Mono.error(new Exception("Not same credit holder - transferpayment")))
-				.filter(cred -> (cred.getConsume()-tpaymentrequest.getAmount()-tpaymentrequest.getCommission())>=0)
-				.switchIfEmpty(Mono.error(new Exception("Cant process the transaction - amount")))
+				        .switchIfEmpty(Mono.error(new Exception("Not same credit holder - transferpayment")))
+				.filter(cred -> (cred.getConsume()-tpaymentrequest.getAmount())>=0)
+				        .switchIfEmpty(Mono.error(new Exception("Cant process the transaction - amount")))
 				.flatMap(cre->{
-					 cre.setConsume(cre.getConsume()-tpaymentrequest.getAmount()-tpaymentrequest.getCommission());
-					 return credwebclient.put().body(BodyInserters.fromValue(cre)).retrieve().bodyToMono(CreditDto.class) ;
+   			            cre.setConsume(cre.getConsume()-tpaymentrequest.getAmount());
+					      return credwebclient.put().body(BodyInserters.fromValue(cre)).retrieve().bodyToMono(CreditDto.class) ;
 				})
 				.switchIfEmpty(Mono.error(new Exception("Cant process the transcation - credit")))
 				.flatMap(cre->transacrepo.save(Transaction.builder()
@@ -257,9 +263,9 @@ public class MstransacserviceImpl implements IMstransacservice{
 				.flatMap(acc-> {
 			    	  acc.setBalance(acc.getBalance()- tpaymentrequest.getAmount()-tpaymentrequest.getCommission());
 			    	  return accwebclient.put().body(BodyInserters.fromValue(acc)).retrieve().bodyToMono(AccountDto.class);
-			      })
+			    	  })
 				.switchIfEmpty(Mono.error(new Exception("Cant process the transaction - account")))
-				.flatMap(then->            transacrepo.save(Transaction.builder()
+				.flatMap(then-> transacrepo.save(Transaction.builder()
 	                    .prodid(then.getId())
 	                    .prodtype(then.getAcctype())
 	                    .transtype("TRANSWITHDRAW")
@@ -270,10 +276,7 @@ public class MstransacserviceImpl implements IMstransacservice{
 	                    .build())); 		 
 				 
 			 
-	}
-	
-	
-	
+	} 
 	
 	@Override
 	public Mono<Boolean> checkforexpiredcredit(String titular){
@@ -282,6 +285,76 @@ public class MstransacserviceImpl implements IMstransacservice{
 				          .map(cons -> cons.stream().filter(a-> a.getMaxmonth().isBefore(LocalDate.now())).count()>0);
 				        		  
 	}
-	 
 
+	@Override
+	public Mono<TransactionResponse> withdrawatm(AtmtransactDto atmrequest, Mono<AccountDto> atmwc,WebClient webclient) { 
+		return atmwc.filter(acc-> acc.getTitular().contains(atmrequest.getTitular()))
+	              .switchIfEmpty(Mono.error(new Exception("Titular not found")))
+			      .flatMap(acc-> transacrepo.countByTitular(atmrequest.getTitular())
+			    		  .flatMap(count-> commissionrepo.findByBankAndProduct(acc.getBank(),acc.getAcctype())
+			    				  .map(commission-> { 
+			    					                 atmrequest.setCommission(atmrequest.getAtmbank().equalsIgnoreCase(acc.getBank())?0d:atmrequest.getCommission());
+	        	                                     atmrequest.setCommission(count>commission.getFreetimes()?atmrequest.getCommission()+commission.getAmount():atmrequest.getCommission());
+	          	                                     return acc;
+				                                    }
+			    	)))
+			      .filter(acc-> acc.getBalance()-atmrequest.getCommission()-atmrequest.getAmount()>=0)
+			      .switchIfEmpty(Mono.error(new Exception("Not enought balance")))
+			      .flatMap(refresh-> {
+			    	  refresh.setBalance(refresh.getBalance()- atmrequest.getAmount()-atmrequest.getCommission());
+			    	  return webclient.put().body(BodyInserters.fromValue(refresh)).retrieve().bodyToMono(AccountDto.class);
+			      })
+			      .switchIfEmpty(Mono.error(new Exception("Error refresh account")))
+			      .flatMap(then->            transacrepo.save(Transaction.builder()
+						                    .prodid(then.getId())
+						                    .prodtype(then.getAcctype())
+						                    .transtype("WITHDRAW")
+						                    .titular(atmrequest.getTitular())
+						                    .amount(atmrequest.getAmount())
+						                    .commission(atmrequest.getCommission())
+						                    .postamount(then.getBalance()) 
+						                    .build()))
+			      .map(transact-> TransactionResponse.builder()
+			    		                                .transactid(transact.getId())
+			                                            .productid(transact.getProdid())
+			                                            .amount(transact.getAmount())
+			                                            .totalcommission(transact.getCommission())
+			                                            .build()
+			      );   
+	}  
+
+	@Override
+	public Mono<TransactionResponse> depositatm(AtmtransactDto atmrequest, Mono<AccountDto> atmwc,WebClient webclient) {
+		return atmwc.filter(acc-> acc.getTitular().contains(atmrequest.getTitular()))
+	              .switchIfEmpty(Mono.error(new Exception("Titular not found")))
+			      .flatMap(acc-> transacrepo.countByTitular(atmrequest.getTitular())
+			    		  .flatMap(count-> commissionrepo.findByBankAndProduct(acc.getBank(),acc.getAcctype())
+			    				  .map(commission-> {
+			    					                 atmrequest.setCommission(atmrequest.getAtmbank().equalsIgnoreCase(acc.getBank())?0d:atmrequest.getCommission());
+				        	                         atmrequest.setCommission(count>commission.getFreetimes()?atmrequest.getCommission()+commission.getAmount():atmrequest.getCommission());
+				          	                         return acc;
+				                                    }
+			    	))) 
+			      .flatMap(refresh-> {
+			    	  refresh.setBalance(refresh.getBalance() + atmrequest.getAmount()-atmrequest.getCommission());
+			    	  return webclient.put().body(BodyInserters.fromValue(refresh)).retrieve().bodyToMono(AccountDto.class);
+			      })
+			      .switchIfEmpty(Mono.error(new Exception("Error refresh account")))
+			      .flatMap(then->            transacrepo.save(Transaction.builder()
+						                    .prodid(then.getId())
+						                    .prodtype(then.getAcctype())
+						                    .transtype("DEPOSIT")
+						                    .titular(atmrequest.getTitular())
+						                    .amount(atmrequest.getAmount())
+						                    .commission(atmrequest.getCommission())
+						                    .postamount(then.getBalance()) 
+						                    .build()))
+			      .map(transact-> TransactionResponse.builder()
+			    		                                .transactid(transact.getId())
+			                                            .productid(transact.getProdid())
+			                                            .amount(transact.getAmount())
+			                                            .totalcommission(transact.getCommission())
+			                                            .build()
+			      );   
+	}
 }

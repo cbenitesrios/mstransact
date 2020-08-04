@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.reactive.function.client.WebClient; 
 import com.everis.mstransact.model.Transaction;
 import com.everis.mstransact.model.dto.AccountDto;
+import com.everis.mstransact.model.dto.AtmtransactDto;
 import com.everis.mstransact.model.dto.CreditDto;
 import com.everis.mstransact.model.request.AccdepositRequest;
 import com.everis.mstransact.model.request.AccwithdrawRequest;
@@ -24,13 +25,13 @@ import com.everis.mstransact.model.request.Creditconsumerequest;
 import com.everis.mstransact.model.request.Creditpaymentrequest;
 import com.everis.mstransact.model.request.Transferpaymentrequest;
 import com.everis.mstransact.model.request.Updatetransactionreq;
+import com.everis.mstransact.model.response.TransactionResponse;
 import com.everis.mstransact.service.IMstransacservice;  
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RestController
-@RequestMapping("/apitransaction") 
-
+@RequestMapping("/apitransaction")
 public class MstransactionController {
 	
 	@Autowired
@@ -58,7 +59,7 @@ public class MstransactionController {
 	@PostMapping("/payment")
 	public Mono<Transaction> creditpayment(@RequestBody Creditpaymentrequest cpaymentrequest){
 		Mono<CreditDto> credit = WebClient.create( URL_CREDIT + "/findcred/"+cpaymentrequest.getId())
-                .get().retrieve().bodyToMono(CreditDto.class).doOnNext(System.out::println);
+                .get().retrieve().bodyToMono(CreditDto.class);
 		return transacservice.creditpayment(cpaymentrequest, credit, WebClient.create(URL_CREDIT + "/updatecredit"));
 	}
 	
@@ -115,11 +116,27 @@ public class MstransactionController {
     public Mono<Transaction> updatetransaction(@RequestBody Updatetransactionreq updatetransactionreq) {
       return transacservice.updatetransaction(updatetransactionreq);
     }
-
+ 
     /*Revisar un consumo vencido*/
     @GetMapping("/checkexpired/{titular}")
     public Mono<Boolean> checkforexpiredcredit(@PathVariable String titular) {
         return transacservice.checkforexpiredcredit(titular);
-      }
- 
+    }
+    
+    
+    //Depositos por atm
+    @PostMapping("/depositatm")
+	public  Mono<TransactionResponse> depositatm(@RequestBody AtmtransactDto mwithdrawrequest){  
+    	Mono<AccountDto> accountReq = WebClient.create(URL_ACCOUNT + "/findacc/"+mwithdrawrequest.getProductid())
+                .get().retrieve().bodyToMono(AccountDto.class);  
+    	return transacservice.depositatm(mwithdrawrequest,accountReq, WebClient.create(URL_ACCOUNT + "/updateaccount"));
+	}
+    
+    //Retiros por atm
+    @PostMapping("/withdrawtatm")
+   	public  Mono<TransactionResponse> withdrawtatm(@RequestBody AtmtransactDto mwithdrawrequest){  
+       	Mono<AccountDto> accountReq = WebClient.create(URL_ACCOUNT + "/findacc/"+mwithdrawrequest.getProductid())
+                   .get().retrieve().bodyToMono(AccountDto.class);  
+       	return transacservice.withdrawatm(mwithdrawrequest,accountReq, WebClient.create(URL_ACCOUNT + "/updateaccount"));
+   	}
 }

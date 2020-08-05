@@ -290,11 +290,11 @@ public class MstransacserviceImpl implements IMstransacservice{
 	public Mono<TransactionResponse> withdrawatm(AtmtransactDto atmrequest, Mono<AccountDto> atmwc,WebClient webclient) { 
 		return atmwc.filter(acc-> acc.getTitular().contains(atmrequest.getTitular()))
 	              .switchIfEmpty(Mono.error(new Exception("Titular not found")))
-			      .flatMap(acc-> transacrepo.countByTitular(atmrequest.getTitular())
+			      .flatMap(acc-> transacrepo.countByTitularAndProdid(atmrequest.getTitular(),atmrequest.getProductid())
 			    		  .flatMap(count-> commissionrepo.findByBankAndProduct(acc.getBank(),acc.getAcctype())
 			    				  .map(commission-> { 
 			    					                 atmrequest.setCommission(atmrequest.getAtmbank().equalsIgnoreCase(acc.getBank())?0d:atmrequest.getCommission());
-	        	                                     atmrequest.setCommission(count>commission.getFreetimes()?atmrequest.getCommission()+commission.getAmount():atmrequest.getCommission());
+	        	                                     atmrequest.setCommission(count>=commission.getFreetimes()?atmrequest.getCommission()+commission.getAmount():atmrequest.getCommission());
 	          	                                     return acc;
 				                                    }
 			    	)))
@@ -320,18 +320,18 @@ public class MstransacserviceImpl implements IMstransacservice{
 			                                            .amount(transact.getAmount())
 			                                            .totalcommission(transact.getCommission())
 			                                            .build()
-			      );   
+			      ).doOnNext(System.out::println);      
 	}  
 
 	@Override
 	public Mono<TransactionResponse> depositatm(AtmtransactDto atmrequest, Mono<AccountDto> atmwc,WebClient webclient) {
 		return atmwc.filter(acc-> acc.getTitular().contains(atmrequest.getTitular()))
 	              .switchIfEmpty(Mono.error(new Exception("Titular not found")))
-			      .flatMap(acc-> transacrepo.countByTitular(atmrequest.getTitular())
+			      .flatMap(acc-> transacrepo.countByTitularAndProdid(atmrequest.getTitular(),atmrequest.getProductid())
 			    		  .flatMap(count-> commissionrepo.findByBankAndProduct(acc.getBank(),acc.getAcctype())
 			    				  .map(commission-> {
 			    					                 atmrequest.setCommission(atmrequest.getAtmbank().equalsIgnoreCase(acc.getBank())?0d:atmrequest.getCommission());
-				        	                         atmrequest.setCommission(count>commission.getFreetimes()?atmrequest.getCommission()+commission.getAmount():atmrequest.getCommission());
+				        	                         atmrequest.setCommission(count>=commission.getFreetimes()?atmrequest.getCommission()+commission.getAmount():atmrequest.getCommission());
 				          	                         return acc;
 				                                    }
 			    	))) 
@@ -340,7 +340,7 @@ public class MstransacserviceImpl implements IMstransacservice{
 			    	  return webclient.put().body(BodyInserters.fromValue(refresh)).retrieve().bodyToMono(AccountDto.class);
 			      })
 			      .switchIfEmpty(Mono.error(new Exception("Error refresh account")))
-			      .flatMap(then->            transacrepo.save(Transaction.builder()
+			      .flatMap(then->           transacrepo.save(Transaction.builder()
 						                    .prodid(then.getId())
 						                    .prodtype(then.getAcctype())
 						                    .transtype("DEPOSIT")
@@ -355,6 +355,6 @@ public class MstransacserviceImpl implements IMstransacservice{
 			                                            .amount(transact.getAmount())
 			                                            .totalcommission(transact.getCommission())
 			                                            .build()
-			      );   
+			      ).doOnNext(System.out::println);   
 	}
 }

@@ -33,7 +33,6 @@ public interface IMstransacservice {
   Mono<Transaction> findtransactionbyid(String id);
   Mono<Transaction> updatetransaction(Updatetransactionreq updatetransactionreq);
   
-  
   Mono<TransactionResponse> depositatm(AtmtransactDto atmrequest, Mono<AccountDto> atmwc, WebClient webclient);
   Mono<TransactionResponse> withdrawatm(AtmtransactDto atmrequest, Mono<AccountDto> atmwc, WebClient webclient);
   

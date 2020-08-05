@@ -133,8 +133,8 @@ public class MstransactionController {
 	}
     
     //Retiros por atm
-    @PostMapping("/withdrawtatm")
-   	public  Mono<TransactionResponse> withdrawtatm(@RequestBody AtmtransactDto mwithdrawrequest){  
+    @PostMapping("/withdrawatm")
+   	public  Mono<TransactionResponse> withdrawatm(@RequestBody AtmtransactDto mwithdrawrequest){  
        	Mono<AccountDto> accountReq = WebClient.create(URL_ACCOUNT + "/findacc/"+mwithdrawrequest.getProductid())
                    .get().retrieve().bodyToMono(AccountDto.class);  
        	return transacservice.withdrawatm(mwithdrawrequest,accountReq, WebClient.create(URL_ACCOUNT + "/updateaccount"));

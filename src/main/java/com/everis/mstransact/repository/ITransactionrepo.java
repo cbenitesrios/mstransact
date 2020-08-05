@@ -14,4 +14,6 @@ public interface ITransactionrepo extends ReactiveMongoRepository<Transaction, S
 
 	Flux<Transaction> findByTitularAndTransactdateBetween(String titular, LocalDate date1, LocalDate date2);
 	Mono<Long> countByTitular(String titular);
+	Mono<Long> countByTitularAndProdid(String titular, String productid);
+	
 }

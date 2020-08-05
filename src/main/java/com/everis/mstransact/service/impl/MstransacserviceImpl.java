@@ -320,7 +320,7 @@ public class MstransacserviceImpl implements IMstransacservice{
 			                                            .amount(transact.getAmount())
 			                                            .totalcommission(transact.getCommission())
 			                                            .build()
-			      ).doOnNext(System.out::println);      
+			      );      
 	}  
 
 	@Override

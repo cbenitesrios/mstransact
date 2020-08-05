@@ -1,13 +1,10 @@
 package com.everis.mstransact.service.impl;
  
-import java.time.LocalDate;
-import java.util.Iterator;
-
+import java.time.LocalDate;  
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.function.client.WebClient;
-
+import org.springframework.web.reactive.function.client.WebClient; 
 import com.everis.mstransact.config.Configtransaction;
 import com.everis.mstransact.model.Consume;
 import com.everis.mstransact.model.Transaction;
@@ -25,11 +22,12 @@ import com.everis.mstransact.repository.ICommissionRepo;
 import com.everis.mstransact.repository.IConsumeRepo;
 import com.everis.mstransact.repository.ITransactionrepo;
 import com.everis.mstransact.service.IMstransacservice;
-import com.google.common.util.concurrent.AtomicDouble;
- 
+import com.google.common.util.concurrent.AtomicDouble; 
+import lombok.extern.java.Log;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
   
+@Log
 @Service
 public class MstransacserviceImpl implements IMstransacservice{
 	
@@ -355,6 +353,6 @@ public class MstransacserviceImpl implements IMstransacservice{
 			                                            .amount(transact.getAmount())
 			                                            .totalcommission(transact.getCommission())
 			                                            .build()
-			      ).doOnNext(System.out::println);   
+			      ).doOnNext(a-> log.info(a.toString()));   
 	}
 }

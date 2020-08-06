@@ -33,8 +33,12 @@ public interface IMstransacservice {
   Mono<Transaction> findtransactionbyid(String id);
   Mono<Transaction> updatetransaction(Updatetransactionreq updatetransactionreq);
   
+  Mono<Transaction> multibankTransPay(Transferpaymentrequest transpay,  Mono<AccountDto> account, Mono<CreditDto> credit, WebClient accwebclient,  WebClient credwebclient);
+  
   Mono<TransactionResponse> depositatm(AtmtransactDto atmrequest, Mono<AccountDto> atmwc, WebClient webclient);
   Mono<TransactionResponse> withdrawatm(AtmtransactDto atmrequest, Mono<AccountDto> atmwc, WebClient webclient);
+  
+  
   
   
 }

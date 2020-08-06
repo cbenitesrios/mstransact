@@ -28,6 +28,7 @@ public class Transaction{
 	private String prodtype; 
 	private String transtype; 	
 	private String titular;
+	private String bank;
 	@Builder.Default
 	private LocalDateTime transactdate= LocalDateTime.now();
 	private Double amount; 

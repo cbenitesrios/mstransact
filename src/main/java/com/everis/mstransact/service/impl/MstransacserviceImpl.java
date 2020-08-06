@@ -65,6 +65,7 @@ public class MstransacserviceImpl implements IMstransacservice{
 							                    .prodid(then.getId())
 							                    .prodtype(then.getAcctype())
 							                    .transtype("WITHDRAW")
+							                    .bank(then.getBank())
 							                    .titular(mwithdrawrequest.getTitular())
 							                    .amount(mwithdrawrequest.getAmount())
 							                    .commission(mwithdrawrequest.getCommission())
@@ -93,6 +94,7 @@ public class MstransacserviceImpl implements IMstransacservice{
 								                    .prodtype(then.getAcctype())
 								                    .transtype("DEPOSIT")
 								                    .titular(mdepositrequest.getTitular())
+								                    .bank(then.getBank())
 								                    .amount(mdepositrequest.getAmount())
 								                    .commission(mdepositrequest.getCommission())
 								                    .postamount(then.getBalance())
@@ -106,7 +108,7 @@ public class MstransacserviceImpl implements IMstransacservice{
 	/*Se registra la transaccion como consumo*/
 	@Override
 	public Mono<Transaction> creditconsume(Creditconsumerequest cconsumerequest,  Mono<CreditDto> credit, WebClient credwebclient) { 
-		return credit.filter(cred-> cred.getTitular().contains(cconsumerequest.getTitular()))
+		return credit.filter(cred-> cred.getTitular().equalsIgnoreCase(cconsumerequest.getTitular()))
 		             .switchIfEmpty(Mono.error(new Exception("Not credit found  - cconsume"))) 
 				     .filter(cred -> (cred.getBaseline()-cred.getConsume()-cconsumerequest.getAmount())>=0)
 				     .switchIfEmpty(Mono.error(new Exception("Cant process the transaction")))
@@ -129,6 +131,7 @@ public class MstransacserviceImpl implements IMstransacservice{
 								                    .prodtype(then.getCredittype())
 								                    .transtype("CONSUME")
 								                    .titular(cconsumerequest.getTitular())
+								                    .bank(then.getBank())
 								                    .amount(cconsumerequest.getAmount())
 								                    .postamount(then.getBaseline()-then.getConsume())
 								                    .build())
@@ -143,7 +146,7 @@ public class MstransacserviceImpl implements IMstransacservice{
 	
 	@Override
 	public Mono<Transaction> creditpayment(Creditpaymentrequest cpaymentrequest, Mono<CreditDto> credit, WebClient credwebclient) { 
-		return  credit.filter(cred-> cred.getTitular().contains(cpaymentrequest.getTitular())) 
+		return  credit.filter(cred-> cred.getTitular().equalsIgnoreCase(cpaymentrequest.getTitular()))
 				.switchIfEmpty(Mono.error(new Exception("Not credit found - cpayment"))) 
 				.filter(cred -> cred.getConsume()-cpaymentrequest.getAmount()>=0)
 				.switchIfEmpty(Mono.error(new Exception("Cant process the transaction")))
@@ -157,6 +160,7 @@ public class MstransacserviceImpl implements IMstransacservice{
 		                    .prodtype(then.getCredittype())
 		                    .transtype("PAYMENT")
 		                    .titular(cpaymentrequest.getTitular())
+		                    .bank(then.getBank())
 		                    .amount(cpaymentrequest.getAmount())
 		                    .postamount(then.getBaseline()-then.getConsume())
 		                    .build())) 
@@ -213,6 +217,7 @@ public class MstransacserviceImpl implements IMstransacservice{
 	                   	   .prodtype(updatetransacreq.getProdtype()) 
 	                   	   .transtype(updatetransacreq.getTranstype())
 	                   	   .titular(updatetransacreq.getTitular())
+		                   .bank(a.getBank())
 	                   	   .transactdate(updatetransacreq.getTransactdate())
 	                   	   .amount(updatetransacreq.getAmount())
 	                   	   .commission(updatetransacreq.getCommission())
@@ -223,7 +228,6 @@ public class MstransacserviceImpl implements IMstransacservice{
 	
 	/*En este metodo se hace una transferencia de una cuenta para hacer el pago de un consumo de un credito*/
 	/*Se realiza como un retiro de cuenta y luego como pago de un consumo*/
-	
 	@Override
 	public Mono<Transaction> transferpayment(Transferpaymentrequest tpaymentrequest, Mono<AccountDto> account,
 			Mono<CreditDto> credit, WebClient accwebclient, WebClient credwebclient) { 
@@ -237,6 +241,7 @@ public class MstransacserviceImpl implements IMstransacservice{
 		         )
 				.filter(acc-> acc.getBalance()-tpaymentrequest.getAmount()-tpaymentrequest.getCommission()>=0)
 				        .switchIfEmpty(Mono.error(new Exception("Cant process the transaction - low account balance")))
+				.flatMap(acc-> credit.filter(cre-> cre.getBank().equalsIgnoreCase(acc.getBank()))).switchIfEmpty(Mono.error( new Exception ("Not same bank transaction")))
 				.then(credit)
 				.filter(cred-> cred.getTitular().contains(tpaymentrequest.getCredittitular()))
 				        .switchIfEmpty(Mono.error(new Exception("Not same credit holder - transferpayment")))
@@ -252,10 +257,28 @@ public class MstransacserviceImpl implements IMstransacservice{
 	                   	     .prodtype(tpaymentrequest.getProdtype()) 
 	                   	     .transtype("TRANSPAYMENT")
 	                   	     .titular(tpaymentrequest.getCredittitular())
+			                 .bank(cre.getBank())
 	                   	     .amount(tpaymentrequest.getAmount())
 	                   	     .commission(tpaymentrequest.getCommission())
 	                   	     .postamount(cre.getConsume()-tpaymentrequest.getAmount()-tpaymentrequest.getCommission()) 
 	                         .build()))
+				.flatMap(transaction-> {
+					AtomicDouble amountss=new AtomicDouble();
+					amountss.set(transaction.getAmount());
+					return consumerepo.findByProductidAndPayedOrderByMonthAsc(transaction.getProdid(), false)  
+					                  .map(consum ->{ 
+					                	  if(amountss.doubleValue()>=consum.getNotpayedamount()){ 
+					                		  amountss.set(amountss.doubleValue()-consum.getNotpayedamount());
+					                		  consum.setNotpayedamount(0d);
+					                		  consum.setPayed(true);
+					                 	  }else{ 
+					                	      consum.setNotpayedamount(consum.getNotpayedamount()-amountss.get());
+					                		  amountss.set(0d); 
+					                	  } 
+					                	  return consum; 
+					                   }).flatMap(consumerepo::save).then()
+					                  .thenReturn(transaction); 
+				  })
 				.switchIfEmpty(Mono.error(new Exception("Cant process the transaction - creditransaction")))
 				.then(account)
 				.flatMap(acc-> {
@@ -267,15 +290,93 @@ public class MstransacserviceImpl implements IMstransacservice{
 	                    .prodid(then.getId())
 	                    .prodtype(then.getAcctype())
 	                    .transtype("TRANSWITHDRAW")
+	                    .bank(then.getBank())
 	                    .titular(tpaymentrequest.getAccounttitular())
 	                    .amount(tpaymentrequest.getAmount())
 	                    .commission(tpaymentrequest.getCommission())
 	                    .postamount(then.getBalance())
-	                    .build())); 		 
+	                    .build()))
+				;
 				 
 			 
 	} 
 	
+	//Pago de una tarjeta de credito desde otra cuenta bancaria no perteneciente al mismo banco
+	@Override
+	public Mono<Transaction> multibankTransPay(Transferpaymentrequest tpaymentrequest,  Mono<AccountDto> account, Mono<CreditDto> credit, WebClient accwebclient,  WebClient credwebclient){
+		return  account.filter(acc->acc.getTitular().contains(tpaymentrequest.getAccounttitular()))
+				.switchIfEmpty(Mono.error(new Exception("Not same account holder - transferpayment")))
+				.flatMap(acc-> 
+		    	  transacrepo.countByTitular(tpaymentrequest.getAccounttitular()).map(count ->
+		    	  {   tpaymentrequest.setCommission(count>=Configtransaction.COMMISSION_FREE_TIMES?Configtransaction.COMMISSION_WITHDRAW_VALUE:0);  
+		    	      return acc;
+		    	  }) 
+		         )
+				.filter(acc-> acc.getBalance()-tpaymentrequest.getAmount()-tpaymentrequest.getCommission()>=0)
+				        .switchIfEmpty(Mono.error(new Exception("Cant process the transaction - low account balance")))
+				.then(credit)
+				.filter(cred-> cred.getCredittype().equalsIgnoreCase("CRE4")||cred.getCredittype().equalsIgnoreCase("CRE3"))
+	           			.switchIfEmpty(Mono.error(new Exception("Credit not credit card")))		
+				.filter(cred-> cred.getTitular().contains(tpaymentrequest.getCredittitular()))
+				        .switchIfEmpty(Mono.error(new Exception("Not same credit holder - transferpayment")))
+				.filter(cred -> (cred.getConsume()-tpaymentrequest.getAmount())>=0)
+				        .switchIfEmpty(Mono.error(new Exception("Cant process the transaction - amount")))
+				.flatMap(cre->{
+   			            cre.setConsume(cre.getConsume()-tpaymentrequest.getAmount());
+					      return credwebclient.put().body(BodyInserters.fromValue(cre)).retrieve().bodyToMono(CreditDto.class) ;
+				})
+				.switchIfEmpty(Mono.error(new Exception("Cant process the transcation - credit")))
+				.flatMap(cre->transacrepo.save(Transaction.builder()
+	                         .prodid(cre.getId())
+	                   	     .prodtype(tpaymentrequest.getProdtype()) 
+	                   	     .transtype("TRANSPAYMENT")
+	                   	     .titular(tpaymentrequest.getCredittitular())
+			                 .bank(cre.getBank())
+	                   	     .amount(tpaymentrequest.getAmount())
+	                   	     .commission(tpaymentrequest.getCommission())
+	                   	     .postamount(cre.getConsume()-tpaymentrequest.getAmount()-tpaymentrequest.getCommission()) 
+	                         .build()))
+				.switchIfEmpty(Mono.error(new Exception("Cant process the transaction - creditransaction")))
+				.flatMap(transaction-> {
+					AtomicDouble amountss=new AtomicDouble();
+					amountss.set(transaction.getAmount());
+					return consumerepo.findByProductidAndPayedOrderByMonthAsc(transaction.getProdid(), false)  
+					                  .map(consum ->{ 
+					                	  if(amountss.doubleValue()>=consum.getNotpayedamount()){ 
+					                		  amountss.set(amountss.doubleValue()-consum.getNotpayedamount());
+					                		  consum.setNotpayedamount(0d);
+					                		  consum.setPayed(true);
+					                 	  }else{ 
+					                	      consum.setNotpayedamount(consum.getNotpayedamount()-amountss.get());
+					                		  amountss.set(0d); 
+					                	  } 
+					                	  return consum; 
+					                   }).flatMap(consumerepo::save).then()
+					                  .thenReturn(transaction); 
+				  })
+				.then(account)
+				.flatMap(acc-> {
+			    	  acc.setBalance(acc.getBalance()- tpaymentrequest.getAmount()-tpaymentrequest.getCommission());
+			    	  return accwebclient.put().body(BodyInserters.fromValue(acc)).retrieve().bodyToMono(AccountDto.class);
+			    	  })
+				.switchIfEmpty(Mono.error(new Exception("Cant process the transaction - account")))
+				.flatMap(then-> transacrepo.save(Transaction.builder()
+	                    .prodid(then.getId())
+	                    .prodtype(then.getAcctype())
+	                    .transtype("TRANSWITHDRAW")
+	                    .bank(then.getBank())
+	                    .titular(tpaymentrequest.getAccounttitular())
+	                    .amount(tpaymentrequest.getAmount())
+	                    .commission(tpaymentrequest.getCommission())
+	                    .postamount(then.getBalance())
+	                    .build()))
+				 ;
+	}
+	
+	
+	
+	
+	/*Revisar si existe un consumo de un crédito vencido*/
 	@Override
 	public Mono<Boolean> checkforexpiredcredit(String titular){
 		return consumerepo.findByTitularAndPayed(titular, false) 
@@ -284,6 +385,7 @@ public class MstransacserviceImpl implements IMstransacservice{
 				        		  
 	}
 
+	/*Retiro desde un ATM - Multibanco*/
 	@Override
 	public Mono<TransactionResponse> withdrawatm(AtmtransactDto atmrequest, Mono<AccountDto> atmwc,WebClient webclient) { 
 		return atmwc.filter(acc-> acc.getTitular().contains(atmrequest.getTitular()))
@@ -321,6 +423,7 @@ public class MstransacserviceImpl implements IMstransacservice{
 			      );      
 	}  
 
+	/*Deposito desde un ATM - Multibanco*/
 	@Override
 	public Mono<TransactionResponse> depositatm(AtmtransactDto atmrequest, Mono<AccountDto> atmwc,WebClient webclient) {
 		return atmwc.filter(acc-> acc.getTitular().contains(atmrequest.getTitular()))
@@ -328,8 +431,8 @@ public class MstransacserviceImpl implements IMstransacservice{
 			      .flatMap(acc-> transacrepo.countByTitularAndProdid(atmrequest.getTitular(),atmrequest.getProductid())
 			    		  .flatMap(count-> commissionrepo.findByBankAndProduct(acc.getBank(),acc.getAcctype())
 			    				  .map(commission-> {
-			    					                 atmrequest.setCommission(atmrequest.getAtmbank().equalsIgnoreCase(acc.getBank())?0d:atmrequest.getCommission());
-				        	                         atmrequest.setCommission(count>=commission.getFreetimes()?atmrequest.getCommission()+commission.getAmount():atmrequest.getCommission());
+			    					                   atmrequest.setCommission(atmrequest.getAtmbank().equalsIgnoreCase(acc.getBank())?0d:atmrequest.getCommission());
+				        	                           atmrequest.setCommission(count>=commission.getFreetimes()?atmrequest.getCommission()+commission.getAmount():atmrequest.getCommission());
 				          	                         return acc;
 				                                    }
 			    	))) 

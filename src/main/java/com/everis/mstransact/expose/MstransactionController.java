@@ -63,7 +63,7 @@ public class MstransactionController {
 		return transacservice.creditpayment(cpaymentrequest, credit, WebClient.create(URL_CREDIT + "/updatecredit"));
 	}
 	
-	/*Pago de un credito mediante transferencia de una cuenta*/
+	/*Pago de un credito mediante transferencia de una cuenta del mismo banco*/
 	@PostMapping("/transferpayment")
 	public Mono<Transaction> transferpayment(@RequestBody Transferpaymentrequest tpaymentrequest){
 		Mono<AccountDto> account = WebClient.create( URL_ACCOUNT + "/findacc/"+tpaymentrequest.getAccountid())
@@ -71,6 +71,16 @@ public class MstransactionController {
 		Mono<CreditDto> credit = WebClient.create( URL_CREDIT + "/findcred/"+tpaymentrequest.getCreditid())
                 .get().retrieve().bodyToMono(CreditDto.class);
 		return transacservice.transferpayment(tpaymentrequest, account, credit, WebClient.create(URL_ACCOUNT + "/updateaccount"), WebClient.create(URL_CREDIT + "/updatecredit"));
+	}
+	
+	/*Pago de un credito mediante transferencia de una cuenta del mismo banco*/
+	@PostMapping("/transferpaymultibank")
+	public Mono<Transaction> transferpaymultibank(@RequestBody Transferpaymentrequest tpaymentrequest){
+		Mono<AccountDto> account = WebClient.create( URL_ACCOUNT + "/findacc/"+tpaymentrequest.getAccountid())
+                .get().retrieve().bodyToMono(AccountDto.class); 
+		Mono<CreditDto> credit = WebClient.create( URL_CREDIT + "/findcred/"+tpaymentrequest.getCreditid())
+                .get().retrieve().bodyToMono(CreditDto.class);
+		return transacservice.multibankTransPay(tpaymentrequest, account, credit, WebClient.create(URL_ACCOUNT + "/updateaccount"), WebClient.create(URL_CREDIT + "/updatecredit"));
 	}
 	 
 	/*Realizar un consumo a un producto de credito*/

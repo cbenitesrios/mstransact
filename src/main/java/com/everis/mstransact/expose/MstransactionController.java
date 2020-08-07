@@ -3,8 +3,10 @@ package com.everis.mstransact.expose;
 import java.time.LocalDate; 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.HttpStatus; 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,6 +21,7 @@ import com.everis.mstransact.model.Transaction;
 import com.everis.mstransact.model.dto.AccountDto;
 import com.everis.mstransact.model.dto.AtmtransactDto;
 import com.everis.mstransact.model.dto.CreditDto;
+import com.everis.mstransact.model.dto.ErrorDto;
 import com.everis.mstransact.model.request.AccdepositRequest;
 import com.everis.mstransact.model.request.AccwithdrawRequest;
 import com.everis.mstransact.model.request.Creditconsumerequest;
@@ -39,6 +42,12 @@ public class MstransactionController {
 	private static final String URL_ACCOUNT= "http://localhost:8030/apiaccount";
 	private static final String URL_CREDIT= "http://localhost:8030/apicredit";
 	
+	
+	  @ExceptionHandler
+	  public Mono<ErrorDto> exception(ServerHttpResponse response, Exception request) {
+		 response.setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR);
+	    return Mono.just(new ErrorDto(request.getLocalizedMessage(), request.getMessage()));
+	  } 
 	
 	/*Realizar un retiro de dinero de una cuenta*/
 	@PostMapping("/withdraw")
